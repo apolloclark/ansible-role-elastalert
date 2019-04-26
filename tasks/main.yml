@@ -1,0 +1,97 @@
+---
+# http://docs.ansible.com/ansible/latest/set_fact_module.html
+- name: Merge elastalert_defaults and elastalert variables
+  set_fact:
+    elastalert_combined: "{{ elastalert_defaults | combine(elastalert, recursive=True) }}"
+
+- name: Install pip
+  apt:
+    name: python-pip
+    state: present
+
+# http://docs.ansible.com/ansible/latest/pip_module.html
+- name: Upgrade pip
+  pip:
+    name: pip
+    extra_args: --upgrade
+
+# http://docs.ansible.com/ansible/latest/pip_module.html
+- name: Install elastalert packages
+  pip:
+    name: "{{ elastalert_combined.pip_packages }}"
+  become_user: "{{ elastalert_combined.pip_user }}"
+
+
+
+# https://docs.ansible.com/ansible/latest/modules/uri_module.html
+- name: Wait for Elasticsearch to become ready
+  uri:
+    url: "http://{{ elastalert_combined.es_host }}:{{ elastalert_combined.es_port }}"
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 10
+  delay: 5
+
+# https://docs.ansible.com/ansible/latest/modules/shell_module.html
+- name: Create Elastalert index
+  shell: |
+    /usr/local/bin/elastalert-create-index \
+      --host "{{ elastalert_combined.es_host }}" \
+      --port {{ elastalert_combined.es_port }} \
+      --url-prefix "{{ elastalert_combined.create_index.url_prefix }}" \
+      --index "{{ elastalert_combined.create_index.index }}" \
+      --old-index "{{ elastalert_combined.create_index.old_index }}" \
+      --username "{{ elastalert_combined.create_index.username }}" \
+      --password "{{ elastalert_combined.create_index.password }}" \
+      --send_get_body_as "{{ elastalert_combined.create_index.send_get_body_as }}" \
+      --profile "{{ elastalert_combined.create_index.profile }}" \
+      --aws-region "{{ elastalert_combined.create_index.aws_region }}" \
+      --recreate "{{ elastalert_combined.create_index.recreate }}" \
+      {{ elastalert_combined.create_index.extra_args }}
+
+# /usr/share/kibana/bin/kibana-plugin install \
+#   https://github.com/bitsensor/elastalert-kibana-plugin/releases/download/1.0.2/elastalert-kibana-plugin-1.0.2-6.6.2.zip
+# service kibana restart
+
+- name: Create system group
+  group:
+    name: "{{ elastalert_combined.sys_group }}"
+
+- name: Create system user
+  user:
+    name: "{{ elastalert_combined.sys_user }}"
+    group: "{{ elastalert_combined.sys_group }}"
+    shell: /bin/false
+
+# http://docs.ansible.com/ansible/latest/file_module.html
+- name: Create config directory
+  file:
+    path: "{{ elastalert_combined.install_dir }}"
+    owner: "{{ elastalert_combined.sys_user }}"
+    group: "{{ elastalert_combined.sys_group }}"
+    state: directory
+
+# http://docs.ansible.com/ansible/latest/template_module.html
+- name: Install config file
+  template:
+    src: "config.yaml"
+    dest: "{{ elastalert_combined.install_dir }}/config.yaml"
+    owner: "{{ elastalert_combined.sys_user }}"
+    group: "{{ elastalert_combined.sys_group }}"
+
+# http://docs.ansible.com/ansible/latest/template_module.html
+- name: Install systemd startup script
+  template:
+    src: "elastalert.service"
+    dest:  /lib/systemd/system/elastalert.service
+    owner: root
+    group: root
+  notify: reload systemd
+
+# https://docs.ansible.com/ansible/latest/modules/service_module.html
+- name: Start the elastalert service
+  service:
+    name: elastalert
+    state: started
+    enabled: yes

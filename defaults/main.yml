@@ -1,0 +1,32 @@
+---
+
+elastalert:
+  output: "json"
+
+elastalert_defaults:
+  pip_user: "root"
+  pip_packages:
+  - "elasticsearch==7.0.0"
+  - "elastalert==0.1.39"
+  es_host: "127.0.0.1"
+  es_port: 9200
+  install_dir: "/etc/elastalert"
+  rules_dir: "rules"
+  sys_user: "elastalert"
+  sys_group: "elastalert"
+  
+  # https://github.com/Yelp/elastalert/blob/master/elastalert/create_index.py
+  create_index:
+    url_prefix: ""
+    index: "elastalert_status"
+    old_index: ""
+    username: ""
+    password: ""
+    send_get_body_as: "GET"
+    profile: ""
+    aws_region: ""
+    recreate: "elastalert_status"
+    extra_args: "--no-ssl --no-auth"
+  kibana_plugin:
+    install: false
+    version: "1.0.2"

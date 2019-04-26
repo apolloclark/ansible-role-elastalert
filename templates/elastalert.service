@@ -1,0 +1,12 @@
+[Unit]
+Description=elastalert
+After=multi-user.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ elastalert_combined.install_dir }}
+ExecStart=/usr/local/bin/elastalert --verbose --config {{ elastalert_combined.install_dir }}/config.yaml
+User={{ elastalert_combined.sys_user }}
+
+[Install]
+WantedBy=multi-user.target

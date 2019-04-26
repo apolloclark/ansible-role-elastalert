@@ -1,0 +1,20 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: elastalert
+  author: apolloclark
+  description: Install and configure Yelp/elastalert
+  company: "Apollo Clark"
+  license: "license (BSD, MIT)"
+  min_ansible_version: 2.2
+  platforms:
+    - name: Ubuntu
+      versions:
+      - xenial
+  galaxy_tags:
+    - elastalert
+    - elk
+    - devops
+    - operations
+    - devsecops
